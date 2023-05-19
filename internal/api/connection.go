@@ -9,9 +9,9 @@ GetConnection: requires connection_id
 package api
 
 import (
-	"fmt"
-	"encoding/json"
-	"net/http"
+  "fmt"
+  "encoding/json"
+  "net/http"
   "errors"
 )
 

@@ -8,11 +8,11 @@ url := "https://dev.api.metaplane.dev/v1/monitors/status/monitorId"
 package api
 
 import (
-	"io"
-	"net/http"
+  "io"
+  "net/http"
   "errors"
-
-	"github.com/hashicorp/go-retryablehttp"
+  
+  "github.com/hashicorp/go-retryablehttp"
 )
 
 const BaseUrl = "https://dev.api.metaplane.dev/v1"

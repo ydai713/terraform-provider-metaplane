@@ -1,13 +1,13 @@
 package provider
 
 import (
-	"context"
-	"fmt"
-
+  "context"
+  "fmt"
+  
   "github.com/klaviyo/terraform-provider-metaplane/internal/api"
-	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+  "github.com/hashicorp/terraform-plugin-framework/types"
+  "github.com/hashicorp/terraform-plugin-framework/datasource"
+  "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
