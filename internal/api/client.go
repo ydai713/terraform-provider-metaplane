@@ -23,7 +23,7 @@ type Client struct {
 }
 
 func (c *Client) doRequest(req *http.Request) ([]byte, error) {
-	req.Header.Set("accept", "application/json")
+  req.Header.Set("accept", "application/json")
   req.Header.Set("content-type", "application/json")
   req.Header.Set("Authorization", c.ApiKey)
 
