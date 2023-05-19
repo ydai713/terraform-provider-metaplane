@@ -1,0 +1,26 @@
+terraform {
+  required_providers {
+    metaplane = {
+      source = "registry.terraform.io/klaviyo/metaplane"
+    }
+  }
+}
+
+provider "metaplane" {
+}
+
+data "metaplane_connection" "snowflake" {
+  name = "Klaviyo Prod"
+}
+
+data "metaplane_monitor" "monitor" {
+  connection_id = data.metaplane_connection.snowflake.id
+  monitor_id    = "d8af199c-ab9f-4080-ac00-fab948fea0c9"
+}
+
+output "monitor" {
+  value = data.metaplane_monitor.monitor
+}
+output "connection" {
+  value = data.metaplane_connection.snowflake
+}
