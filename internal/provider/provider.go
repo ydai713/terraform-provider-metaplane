@@ -1,17 +1,17 @@
 package provider
 
 import (
-	"context"
+  "context"
   "os"
-
+  
   "github.com/klaviyo/terraform-provider-metaplane/internal/api"
-
+  
   "github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
-	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+  "github.com/hashicorp/terraform-plugin-framework/datasource"
+  "github.com/hashicorp/terraform-plugin-framework/provider"
+  "github.com/hashicorp/terraform-plugin-framework/provider/schema"
+  "github.com/hashicorp/terraform-plugin-framework/resource"
+  "github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 // Ensure metaplaneProvider satisfies various provider interfaces.
