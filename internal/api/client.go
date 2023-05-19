@@ -19,7 +19,7 @@ const BaseUrl = "https://dev.api.metaplane.dev/v1"
 
 type Client struct {
   ApiKey            string
-	HTTPClient        *retryablehttp.Client
+  HTTPClient        *retryablehttp.Client
 }
 
 func (c *Client) doRequest(req *http.Request) ([]byte, error) {
