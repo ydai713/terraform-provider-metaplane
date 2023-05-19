@@ -20,18 +20,18 @@ import (
 )
 
 type Monitor struct {
-	MonitorId       string   `tfsdk:"monitor_id"      json:"id"`
-	ConnectionId    string   `tfsdk:"connection_id"`      
-  Type            string   `tfsdk:"type"            json:"type"`
-  CronTab         string   `tfsdk:"cron_tab"        json:"cronTab"`
-  IsEnabled       bool     `tfsdk:"is_enabled"      json:"isEnabled"`
-  UpdatedAt       string   `tfsdk:"updated_at"      json:"updatedAt"`
-  AbsolutePath    string   `tfsdk:"absolute_path"   json:"absolutePath"`
-  CreatedAt       string   `tfsdk:"created_at"      json:"createdAt"`
+  MonitorId       string   `json:"id"`
+  ConnectionId    string
+  Type            string   `json:"type"`
+  CronTab         string   `json:"cronTab"`
+  IsEnabled       bool     `json:"isEnabled"`
+  UpdatedAt       string   `json:"updatedAt"`
+  AbsolutePath    string   `json:"absolutePath"`
+  CreatedAt       string   `json:"createdAt"`
 }
 
 type Monitors struct {
-  Data         []Monitor `json:"data"`
+  Data           []Monitor `json:"data"`
 }
 
 func (c *Client) GetMonitor(connectionId string, monitorId string) (*Monitor, error) {
