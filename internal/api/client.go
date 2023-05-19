@@ -69,5 +69,5 @@ func NewClient(apiKey *string) *Client {
   	HTTPClient: httpClient,
   	ApiKey: *apiKey,
   }
-	return &c
+  return &c
 }
