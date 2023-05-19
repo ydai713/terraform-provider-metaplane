@@ -65,10 +65,9 @@ func (c *Client) doRequest(req *http.Request) ([]byte, error) {
 
 func NewClient(apiKey *string) *Client {
   httpClient := retryablehttp.NewClient()
-	c := Client{
-		HTTPClient: httpClient,
-		ApiKey: *apiKey,
-	}
-
+  c := Client{
+  	HTTPClient: httpClient,
+  	ApiKey: *apiKey,
+  }
 	return &c
 }
