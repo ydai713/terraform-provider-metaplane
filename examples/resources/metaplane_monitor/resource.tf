@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     metaplane = {
-      source  = "registry.terraform.io/klaviyo/metaplane"
+      source = "registry.terraform.io/klaviyo/metaplane"
     }
   }
 }
