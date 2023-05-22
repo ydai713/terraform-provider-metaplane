@@ -116,6 +116,7 @@ func (p *metaplaneProvider) Configure(ctx context.Context, req provider.Configur
 
 func (p *metaplaneProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
+    NewMonitorResource,
 	}
 }
 

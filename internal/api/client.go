@@ -10,6 +10,7 @@ package api
 import (
   "io"
   "net/http"
+  "encoding/json"
   "errors"
   
   "github.com/hashicorp/go-retryablehttp"
@@ -20,6 +21,11 @@ const BaseUrl = "https://dev.api.metaplane.dev/v1"
 type Client struct {
   ApiKey            string
   HTTPClient        *retryablehttp.Client
+}
+
+type ErrorResponse struct {
+  StatusCode      int         `json:"statusCode"`
+  ErrorMessage    string      `json:"errorMessage"`
 }
 
 func (c *Client) doRequest(req *http.Request) ([]byte, error) {
@@ -39,28 +45,22 @@ func (c *Client) doRequest(req *http.Request) ([]byte, error) {
 
 	defer res.Body.Close()
 
-	switch statusCode := res.StatusCode; statusCode {
-	case 200:
-    body, err := io.ReadAll(res.Body)
-    if err != nil {
-      return nil, err
-    }
+  body, err := io.ReadAll(res.Body)
+  if err != nil {
+    return nil, err
+  }
+
+	statusCode := res.StatusCode
+  if statusCode == 200 {
     return body, err
-	case 400:
-    return nil, errors.New("Resource not found")
-	case 401:
-    return nil, errors.New("Unauthorized")
-	case 403:
-    return nil, errors.New("Forbidden")
-	case 409:
-    return nil, errors.New("Try again later")
-	case 422:
-    return nil, errors.New("Unprocessable entity or invalid request")
-	case 500:
-    return nil, errors.New("Invalid consent url")
-	default:
-    return nil, errors.New("Unknown error")
-	}
+  }
+
+  error_response := ErrorResponse{}
+  err = json.Unmarshal(body, &error_response)
+  if err != nil {
+    return nil, errors.New(string(body))
+  }
+  return nil, errors.New(error_response.ErrorMessage)
 }
 
 func NewClient(apiKey *string) *Client {
