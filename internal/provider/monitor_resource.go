@@ -1,6 +1,7 @@
 package provider
 
 import (
+  "strings" 
 	"context"
   "fmt"
 
@@ -249,6 +250,32 @@ func (r *MonitorResource) Delete(ctx context.Context, req resource.DeleteRequest
           "Error Deleting Metaplane Monitor",
           "Could not delete monitor, unexpected error: "+err.Error(),
       )
+      return
+  }
+}
+
+func (r *MonitorResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+  ids := strings.Split(req.ID, "|")
+  if len(ids) != 3 {
+      resp.Diagnostics.AddError(
+          "Invalid ID", 
+          "Incorrect ID format. Expected format is 'connection_id|monitor_id'",
+      )
+      return
+  }
+
+  connectionId, monitorId, entityType := ids[0], ids[1], ids[2]
+    
+  // Overwrite items with refreshed state
+  var state MonitorResourceModel
+  state.MonitorId    = types.StringValue(monitorId)
+  state.ConnectionId = types.StringValue(connectionId)
+  state.EntityType   = types.StringValue(entityType)
+
+  // Set refreshed state
+  diags := resp.State.Set(ctx, &state)
+  resp.Diagnostics.Append(diags...)
+  if resp.Diagnostics.HasError() {
       return
   }
 }
