@@ -14,7 +14,7 @@ Connection data source
 
 ```terraform
 data "metaplane_connection" "snowflake" {
-  name = "Klaviyo Prod"
+  name = "snowflake"
 }
 ```
 

@@ -14,12 +14,12 @@ Monitor data source
 
 ```terraform
 data "metaplane_connection" "snowflake" {
-  name = "Klaviyo Prod"
+  name = "snowflake"
 }
 
 data "metaplane_monitor" "monitor" {
   connection_id = data.metaplane_connection.snowflake.id
-  monitor_id    = "d8af199c-ab9f-4080-ac00-fab948fea0c9"
+  monitor_id    = "string"
 }
 ```
 
