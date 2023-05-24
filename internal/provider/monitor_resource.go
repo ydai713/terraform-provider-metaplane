@@ -204,6 +204,7 @@ func (r *MonitorResource) Update(ctx context.Context, req resource.UpdateRequest
   updateMonitor := api.UpdateMonitor{
     CronTab:      plan.CronTab.ValueString(),
     MonitorId:    plan.MonitorId.ValueString(),
+    IsEnabled:    true,
   }
 
   // Update existing monitor
