@@ -58,7 +58,7 @@ func (c *Client) doRequest(req *http.Request) ([]byte, error) {
   error_response := ErrorResponse{}
   err = json.Unmarshal(body, &error_response)
   if err != nil {
-    return nil, errors.New(string(body))
+    return nil, err
   }
   return nil, errors.New(error_response.ErrorMessage)
 }

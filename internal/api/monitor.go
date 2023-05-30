@@ -13,6 +13,7 @@ DeleteMonitor: there is no delete method for monitors. Instead, use the UPDATE m
 package api
 
 import (
+  "context"
   "fmt"
   "encoding/json"
   "net/http"
@@ -20,37 +21,58 @@ import (
   "strings"
 )
 
-type Monitor struct {
-  MonitorId       string   `json:"id"`
-  ConnectionId    string
-  Type            string   `json:"type"`
-  CronTab         string   `json:"cronTab"`
-  IsEnabled       bool     `json:"isEnabled"`
-  UpdatedAt       string   `json:"updatedAt"`
-  AbsolutePath    string   `json:"absolutePath"`
-  CreatedAt       string   `json:"createdAt"`
+type Duration struct {
+  Days              int64              `json:"days,omitempty"`
+  Hours             int64              `json:"hours,omitempty"`
+  Minutes           int64              `json:"minutes,omitempty"`
 }
 
-type Monitors struct {
-  Data           []Monitor `json:"data"`
+type IncrementalClause struct {
+  ColumnName        string             `json:"columnName,omitempty"`
+  Duration          *Duration          `json:"duration,omitempty"`
+}
+
+type Config struct {
+  CustomSql         *string            `json:"customSql,omitempty"`
+  IncrementalClause *IncrementalClause `json:"incrementalClause,omitempty"`
+  CustomWhereClause *string            `json:"customWhereClause,omitempty"`
+}
+
+type Monitor struct {
+  ID                string             `json:"id"`
+  Type              string             `json:"type"`
+  CronTab           string             `json:"cronTab"`
+  IsEnabled         bool               `json:"isEnabled"`
+  Config            *Config            `json:"config"`
+  CreatedAt         string             `json:"createdAt"`
+  UpdatedAt         string             `json:"updatedAt"`
+  AbsolutePath      string             `json:"absolutePath"`
+  ConnectionId      string             `json:"connectionId"`
+  EntityType        string             `json:"entityType"`
 }
 
 type NewMonitor struct {
-  ConnectionId    string   `json:"connectionId"`
-  Type            string   `json:"type"`
-  EntityType      string   `json:"entityType"`
-  CronTab         string   `json:"cronTab"`
-  AbsolutePath    string   `json:"absolutePathString"`
+  ConnectionId        string           `json:"connectionId"`
+  Type                string           `json:"type"`
+  EntityType          string           `json:"entityType"`
+  CronTab             string           `json:"cronTab"`
+  AbsolutePath        string           `json:"absolutePathString"`
+  Config              Config           `json:"config,omitempty"`
+}
+
+type Monitors struct {
+  Data                []Monitor        `json:"data"`
 }
 
 type UpdateMonitor struct {
-  MonitorId       string
-  CronTab         string   `json:"cronTab"`
-  IsEnabled       bool     `json:"isEnabled"`
+  MonitorId           string
+  CronTab             string           `json:"cronTab,omitempty"`
+  IsEnabled           bool             `json:"isEnabled,omitempty"`
+  Config              Config           `json:"config,omitempty"`
 }
 
-func (c *Client) GetMonitor(connectionId string, monitorId string) (*Monitor, error) {
-  req, err := http.NewRequest("GET", fmt.Sprintf("%s/monitors/connection/%s", BaseUrl, connectionId), nil)
+func (c *Client) GetMonitor(monitorId string) (*Monitor, error) {
+  req, err := http.NewRequest("GET", fmt.Sprintf("%s/monitors/%s", BaseUrl, monitorId), nil)
   if err != nil {
   	return nil, err
   }
@@ -62,23 +84,16 @@ func (c *Client) GetMonitor(connectionId string, monitorId string) (*Monitor, er
   }
   
   // Parse the response
-  monitors := Monitors{}
-  err = json.Unmarshal(body, &monitors)
+  monitor := Monitor{}
+  err = json.Unmarshal(body, &monitor)
   if err != nil {
   	return nil, err
   }
   
-  for _, monitor := range monitors.Data {
-  	if monitor.MonitorId == monitorId {
-      monitor.ConnectionId = connectionId
-      return &monitor, nil
-  	}
-  }
-  
-  return nil, errors.New("Monitor is not found")
+  return &monitor, nil
 }
 
-func (c *Client) CreateMonitor(newMonitor NewMonitor) (*Monitor, error) {
+func (c *Client) CreateMonitor(ctx context.Context, newMonitor NewMonitor) (*Monitor, error) {
   rb, err := json.Marshal(newMonitor)
   if err != nil {
  	  return nil, err
@@ -88,7 +103,6 @@ func (c *Client) CreateMonitor(newMonitor NewMonitor) (*Monitor, error) {
   if err != nil {
    	return nil, err
   }
-  
   body, err := c.doRequest(req)
   if err != nil {
     if strings.Contains(err.Error(), "already exists") {
@@ -105,7 +119,7 @@ func (c *Client) CreateMonitor(newMonitor NewMonitor) (*Monitor, error) {
         CronTab:   newMonitor.CronTab,
       }
 
-      return c.UpdateMonitor(updateMonitor)
+      return c.UpdateMonitor(ctx, updateMonitor)
     }
    	return nil, err
   }
@@ -116,11 +130,10 @@ func (c *Client) CreateMonitor(newMonitor NewMonitor) (*Monitor, error) {
    	return nil, err
   }
 
-  monitor.ConnectionId = newMonitor.ConnectionId
   return &monitor, nil
 }
 
-func (c *Client) UpdateMonitor(updateMonitor UpdateMonitor) (*Monitor, error) {
+func (c *Client) UpdateMonitor(ctx context.Context, updateMonitor UpdateMonitor) (*Monitor, error) {
   monitorId := updateMonitor.MonitorId
 
   rb, err := json.Marshal(updateMonitor)
@@ -135,7 +148,7 @@ func (c *Client) UpdateMonitor(updateMonitor UpdateMonitor) (*Monitor, error) {
   
   body, err := c.doRequest(req)
   if err != nil {
-   	return nil, errors.New("3")
+   	return nil, errors.New(string(rb))
   }
   
   monitor := Monitor{}
@@ -153,7 +166,6 @@ func (c *Client) getDuplicatedMonitor(connectionId string, absolutePath string, 
   	return "", err
   }
   
-  // Send request to the API
   body, err := c.doRequest(req)
   if err != nil {
   	return "", err
@@ -168,7 +180,7 @@ func (c *Client) getDuplicatedMonitor(connectionId string, absolutePath string, 
   
   for _, monitor := range monitors.Data {
   	if strings.ToUpper(monitor.Type) == strings.ToUpper(monitorType) && strings.ToUpper(monitor.AbsolutePath) == strings.ToUpper(absolutePath) {
-      return monitor.MonitorId, nil
+      return monitor.ID, nil
   	}
   }
   

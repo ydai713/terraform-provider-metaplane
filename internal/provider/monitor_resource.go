@@ -1,7 +1,6 @@
 package provider
 
 import (
-  "strings" 
 	"context"
   "fmt"
 
@@ -11,16 +10,19 @@ import (
 	"github.com/klaviyo/terraform-provider-metaplane/internal/api"
   "github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
   "github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+  "github.com/hashicorp/terraform-plugin-framework/path"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-  _ resource.Resource = &MonitorResource{}
+  _ resource.Resource                = &MonitorResource{}
+  _ resource.ResourceWithConfigure   = &MonitorResource{}
+  _ resource.ResourceWithImportState = &MonitorResource{}
 )
 
 // NewOrderResource is a helper function to simplify the provider implementation.
 func NewMonitorResource() resource.Resource {
-    return &MonitorResource{}
+  return &MonitorResource{}
 }
 
 // MonitorResource is the resource implementation.
@@ -29,14 +31,19 @@ type MonitorResource struct{
 }
 
 type MonitorResourceModel struct {
-	ConnectionId   types.String    `tfsdk:"connection_id"`
-	MonitorId      types.String    `tfsdk:"monitor_id"`
-  Type           types.String    `tfsdk:"type"`
-  CronTab        types.String    `tfsdk:"cron_tab"`
-  AbsolutePath   types.String    `tfsdk:"absolute_path"`
-  EntityType     types.String    `tfsdk:"entity_type"`
-  UpdatedAt      types.String    `tfsdk:"updated_at"`
-  CreatedAt      types.String    `tfsdk:"created_at"`
+	ConnectionId          types.String            `tfsdk:"connection_id"`
+	MonitorId             types.String            `tfsdk:"monitor_id"`
+  Type                  types.String            `tfsdk:"type"`
+  CronTab               types.String            `tfsdk:"cron_tab"`
+  AbsolutePath          types.String            `tfsdk:"absolute_path"`
+  EntityType            types.String            `tfsdk:"entity_type"`
+  CreatedAt             types.String            `tfsdk:"created_at"`
+  CustomSql             types.String            `tfsdk:"custom_sql"`
+  CustomWhereClause     types.String            `tfsdk:"custom_where_clause"`
+  IncrementalColumnName types.String            `tfsdk:"incremental_column_name"`
+  IncrementalDays       types.Int64             `tfsdk:"incremental_days"`
+  IncrementalHours      types.Int64             `tfsdk:"incremental_hours"`
+  IncrementalMinutes    types.Int64             `tfsdk:"incremental_minutes"`
 }
 
 // Metadata returns the resource type name.
@@ -72,42 +79,64 @@ func (r *MonitorResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 		Attributes: map[string]schema.Attribute{
 			"monitor_id": schema.StringAttribute{
 				MarkdownDescription: "Monitor identifier",
-				Computed:            true,
+				Computed: true,
         PlanModifiers: []planmodifier.String{
           stringplanmodifier.UseStateForUnknown(),
         },
 			},
 			"connection_id": schema.StringAttribute{
 				MarkdownDescription: "Connection identifier",
-				Required:            true,
+				Required: true,
 			},
 			"entity_type": schema.StringAttribute{
         MarkdownDescription: "Entity type: table or column",
-				Required:            true,
+				Required: true,
 			},
 			"type": schema.StringAttribute{
 				MarkdownDescription: "Type of monitor, row_count, etc",
-				Required:            true,
+				Required: true,
 			},
 			"cron_tab": schema.StringAttribute{
 				MarkdownDescription: "cron job schedule in * * * * * format",
-				Required:            true,
+				Required: true,
 			},
 			"absolute_path": schema.StringAttribute{
 				MarkdownDescription: "{database}.{schema}.{table}.{column}",
-				Required:            true,
-			},
-			"updated_at": schema.StringAttribute{
-				MarkdownDescription: "datetime updated",
-				Computed:            true,
+				Required: true,
 			},
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "datetime created",
-				Computed:            true,
+				Computed: true,
         PlanModifiers: []planmodifier.String{
           stringplanmodifier.UseStateForUnknown(),
         },
 			},
+			"custom_sql": schema.StringAttribute{
+				MarkdownDescription: "custom sql",
+				Required: false,
+        Optional: true,
+			},
+			"custom_where_clause": schema.StringAttribute{
+				MarkdownDescription: "custom where clause",
+				Required: false,
+        Optional: true,
+			},
+      "incremental_column_name": schema.StringAttribute{
+        MarkdownDescription: "Incremental column name",
+        Optional: true,
+      },
+      "incremental_days": schema.Int64Attribute{
+        MarkdownDescription: "Incremental days",
+        Optional: true,
+      },
+      "incremental_hours": schema.Int64Attribute{
+        MarkdownDescription: "Incremental hours",
+        Optional: true,
+      },
+      "incremental_minutes": schema.Int64Attribute{
+        MarkdownDescription: "Incremental minutes",
+        Optional: true,
+      },
 		},
 	}
 }
@@ -123,16 +152,35 @@ func (r *MonitorResource) Create(ctx context.Context, req resource.CreateRequest
   }
 
   // Generate API request body from plan
+  Duration := api.Duration {
+    Days: plan.IncrementalDays.ValueInt64(),
+    Hours: plan.IncrementalHours.ValueInt64(),
+    Minutes: plan.IncrementalMinutes.ValueInt64(),
+  }
+
+  IncrementalClause := api.IncrementalClause {
+    ColumnName: plan.IncrementalColumnName.ValueString(),
+    Duration: &Duration,
+  }
+
+  customSql := plan.CustomSql.ValueString()
+  customWhereClause := plan.CustomWhereClause.ValueString()
+  Config := api.Config {
+    CustomSql: &customSql,
+    CustomWhereClause: &customWhereClause,
+    IncrementalClause: &IncrementalClause,
+  }
+
   newMonitor := api.NewMonitor{
     ConnectionId: plan.ConnectionId.ValueString(),
     Type:         plan.Type.ValueString(),
     EntityType:   plan.EntityType.ValueString(),
     CronTab:      plan.CronTab.ValueString(),
     AbsolutePath: plan.AbsolutePath.ValueString(),
+    Config:       Config,
   }
-
   // Create new monitor
-  monitor, err := r.client.CreateMonitor(newMonitor)
+  monitor, err := r.client.CreateMonitor(ctx, newMonitor)
   if err != nil {
       resp.Diagnostics.AddError(
           "Error creating monitor",
@@ -142,8 +190,7 @@ func (r *MonitorResource) Create(ctx context.Context, req resource.CreateRequest
   }
 
   // Map response body to schema and populate Computed attribute values
-  plan.MonitorId = types.StringValue(monitor.MonitorId)
-  plan.UpdatedAt = types.StringValue(monitor.UpdatedAt)
+  plan.MonitorId = types.StringValue(monitor.ID)
   plan.CreatedAt = types.StringValue(monitor.CreatedAt)
 
   // Set state to fully populated data
@@ -163,10 +210,9 @@ func (r *MonitorResource) Read(ctx context.Context, req resource.ReadRequest, re
       return
   }
   // Get refreshed monitor value from API
-  connectionId := state.ConnectionId.ValueString()
   monitorId := state.MonitorId.ValueString()
 
-  monitor, err := r.client.GetMonitor(connectionId, monitorId)
+  monitor, err := r.client.GetMonitor(monitorId)
   if err != nil {
       resp.Diagnostics.AddError(
           "Error Reading Metaplane Monitor",
@@ -174,13 +220,45 @@ func (r *MonitorResource) Read(ctx context.Context, req resource.ReadRequest, re
       )
       return
   }
- 
-  // Overwrite items with refreshed state
-  state.Type         = types.StringValue(monitor.Type)
-  state.CronTab      = types.StringValue(monitor.CronTab)
-  state.AbsolutePath = types.StringValue(monitor.AbsolutePath)
-  state.UpdatedAt    = types.StringValue(monitor.UpdatedAt)
-  state.CreatedAt    = types.StringValue(monitor.CreatedAt)
+
+  if monitor.Config != nil {
+    if monitor.Config.IncrementalClause != nil {
+      state.IncrementalColumnName = types.StringValue(monitor.Config.IncrementalClause.ColumnName)
+      state.IncrementalDays       = types.Int64Value(monitor.Config.IncrementalClause.Duration.Days)
+      state.IncrementalHours      = types.Int64Value(monitor.Config.IncrementalClause.Duration.Hours)
+      state.IncrementalMinutes    = types.Int64Value(monitor.Config.IncrementalClause.Duration.Minutes)
+    } else {
+      state.IncrementalColumnName = types.StringNull()
+      state.IncrementalDays       = types.Int64Null()
+      state.IncrementalHours      = types.Int64Null()
+      state.IncrementalMinutes    = types.Int64Null()
+    }
+    if monitor.Config.CustomSql != nil {
+      state.CustomSql             = types.StringValue(*monitor.Config.CustomSql)
+    } else {
+      state.CustomSql = types.StringNull()
+    }
+
+    if monitor.Config.CustomWhereClause != nil {
+      state.CustomWhereClause     = types.StringValue(*monitor.Config.CustomWhereClause)
+    } else {
+      state.CustomWhereClause     = types.StringNull()
+    }
+  } else {
+    state.IncrementalColumnName = types.StringNull()
+    state.IncrementalDays       = types.Int64Null()
+    state.IncrementalHours      = types.Int64Null()
+    state.IncrementalMinutes    = types.Int64Null()
+    state.CustomSql             = types.StringNull()
+    state.CustomWhereClause     = types.StringNull()
+  }
+
+  state.Type                  = types.StringValue(monitor.Type)
+  state.CronTab               = types.StringValue(monitor.CronTab)
+  state.AbsolutePath          = types.StringValue(monitor.AbsolutePath)
+  state.CreatedAt             = types.StringValue(monitor.CreatedAt)
+  state.ConnectionId          = types.StringValue(monitor.ConnectionId)
+  state.EntityType            = types.StringValue(monitor.EntityType)
 
   // Set refreshed state
   diags = resp.State.Set(ctx, &state)
@@ -201,14 +279,40 @@ func (r *MonitorResource) Update(ctx context.Context, req resource.UpdateRequest
   }
 
   // Generate API request body from plan
+  var Duration api.Duration
+  if !plan.IncrementalDays.IsNull() || !plan.IncrementalHours.IsNull() || !plan.IncrementalMinutes.IsNull() {
+    Duration = api.Duration {
+      Days: plan.IncrementalDays.ValueInt64(),
+      Hours: plan.IncrementalHours.ValueInt64(),
+      Minutes: plan.IncrementalMinutes.ValueInt64(),
+    }
+  }
+
+  customSql := plan.CustomSql.ValueString()
+  customWhereClause := plan.CustomWhereClause.ValueString()
+
+  Config := api.Config{
+      CustomSql:         &customSql,
+      CustomWhereClause: &customWhereClause,
+  }
+
+  if !plan.IncrementalDays.IsNull() || !plan.IncrementalHours.IsNull() || !plan.IncrementalMinutes.IsNull() || !plan.IncrementalColumnName.IsNull() {
+      IncrementalClause := api.IncrementalClause{
+          ColumnName: plan.IncrementalColumnName.ValueString(),
+          Duration:   &Duration,
+      }
+      Config.IncrementalClause = &IncrementalClause
+  }
+
   updateMonitor := api.UpdateMonitor{
-    CronTab:      plan.CronTab.ValueString(),
-    MonitorId:    plan.MonitorId.ValueString(),
-    IsEnabled:    true,
+      CronTab:   plan.CronTab.ValueString(),
+      MonitorId: plan.MonitorId.ValueString(),
+      IsEnabled: true,
+      Config:    Config,
   }
 
   // Update existing monitor
-  monitor, err := r.client.UpdateMonitor(updateMonitor)
+  monitor, err := r.client.UpdateMonitor(ctx, updateMonitor)
   if err != nil {
       resp.Diagnostics.AddError(
           "Error updating monitor",
@@ -219,7 +323,6 @@ func (r *MonitorResource) Update(ctx context.Context, req resource.UpdateRequest
 
   // Update resource state with updated items and timestamp
   plan.CronTab      = types.StringValue(monitor.CronTab)
-  plan.UpdatedAt    = types.StringValue(monitor.UpdatedAt)
 
   // Set state to fully populated data
   diags = resp.State.Set(ctx, plan)
@@ -244,7 +347,7 @@ func (r *MonitorResource) Delete(ctx context.Context, req resource.DeleteRequest
     IsEnabled: false,
   }
 
-  _, err := r.client.UpdateMonitor(updateMonitor)
+  _, err := r.client.UpdateMonitor(ctx, updateMonitor)
 
   if err != nil {
       resp.Diagnostics.AddError(
@@ -256,27 +359,5 @@ func (r *MonitorResource) Delete(ctx context.Context, req resource.DeleteRequest
 }
 
 func (r *MonitorResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-  ids := strings.Split(req.ID, "|")
-  if len(ids) != 3 {
-      resp.Diagnostics.AddError(
-          "Invalid ID", 
-          "Incorrect ID format. Expected format is 'connection_id|monitor_id'",
-      )
-      return
-  }
-
-  connectionId, monitorId, entityType := ids[0], ids[1], ids[2]
-    
-  // Overwrite items with refreshed state
-  var state MonitorResourceModel
-  state.MonitorId    = types.StringValue(monitorId)
-  state.ConnectionId = types.StringValue(connectionId)
-  state.EntityType   = types.StringValue(entityType)
-
-  // Set refreshed state
-  diags := resp.State.Set(ctx, &state)
-  resp.Diagnostics.Append(diags...)
-  if resp.Diagnostics.HasError() {
-      return
-  }
+  resource.ImportStatePassthroughID(ctx, path.Root("monitor_id"), req, resp)
 }
