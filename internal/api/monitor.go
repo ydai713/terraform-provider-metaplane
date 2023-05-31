@@ -22,13 +22,13 @@ import (
 )
 
 type Duration struct {
-  Days              int64              `json:"days,omitempty"`
-  Hours             int64              `json:"hours,omitempty"`
-  Minutes           int64              `json:"minutes,omitempty"`
+  Days              *int64              `json:"days,omitempty"`
+  Hours             *int64              `json:"hours,omitempty"`
+  Minutes           *int64              `json:"minutes,omitempty"`
 }
 
 type IncrementalClause struct {
-  ColumnName        string             `json:"columnName,omitempty"`
+  ColumnName        *string             `json:"columnName,omitempty"`
   Duration          *Duration          `json:"duration,omitempty"`
 }
 

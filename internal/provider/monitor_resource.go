@@ -152,23 +152,24 @@ func (r *MonitorResource) Create(ctx context.Context, req resource.CreateRequest
   }
 
   // Generate API request body from plan
-  Duration := api.Duration {
-    Days: plan.IncrementalDays.ValueInt64(),
-    Hours: plan.IncrementalHours.ValueInt64(),
-    Minutes: plan.IncrementalMinutes.ValueInt64(),
-  }
-
-  IncrementalClause := api.IncrementalClause {
-    ColumnName: plan.IncrementalColumnName.ValueString(),
-    Duration: &Duration,
-  }
-
   customSql := plan.CustomSql.ValueString()
   customWhereClause := plan.CustomWhereClause.ValueString()
-  Config := api.Config {
-    CustomSql: &customSql,
+  incrementalColumnName := plan.IncrementalColumnName.ValueString()
+  incrementalDays := plan.IncrementalDays.ValueInt64()
+  incrementalHours := plan.IncrementalHours.ValueInt64()
+  incrementalMinutes := plan.IncrementalMinutes.ValueInt64()
+
+  Config := api.Config{
+    CustomSql:         &customSql,
     CustomWhereClause: &customWhereClause,
-    IncrementalClause: &IncrementalClause,
+    IncrementalClause: &api.IncrementalClause{
+      ColumnName: &incrementalColumnName,
+      Duration: &api.Duration{
+        Days: &incrementalDays,
+        Hours: &incrementalHours,
+        Minutes: &incrementalMinutes,
+      },
+    },
   }
 
   newMonitor := api.NewMonitor{
@@ -223,10 +224,44 @@ func (r *MonitorResource) Read(ctx context.Context, req resource.ReadRequest, re
 
   if monitor.Config != nil {
     if monitor.Config.IncrementalClause != nil {
-      state.IncrementalColumnName = types.StringValue(monitor.Config.IncrementalClause.ColumnName)
-      state.IncrementalDays       = types.Int64Value(monitor.Config.IncrementalClause.Duration.Days)
-      state.IncrementalHours      = types.Int64Value(monitor.Config.IncrementalClause.Duration.Hours)
-      state.IncrementalMinutes    = types.Int64Value(monitor.Config.IncrementalClause.Duration.Minutes)
+
+      // incrementalColumnName could be nil
+      if monitor.Config.IncrementalClause.ColumnName != nil {
+        incrementalColumnName := monitor.Config.IncrementalClause.ColumnName
+        state.IncrementalColumnName = types.StringValue(*incrementalColumnName)
+      } else {
+        state.IncrementalColumnName = types.StringNull()
+      }
+
+      if monitor.Config.IncrementalClause.Duration != nil {
+        days := monitor.Config.IncrementalClause.Duration.Days
+        if days != nil {
+          state.IncrementalDays = types.Int64Value(*days)
+        } else {
+          state.IncrementalDays = types.Int64Null()
+        }
+
+        hours := monitor.Config.IncrementalClause.Duration.Hours
+        if hours != nil {
+          state.IncrementalHours = types.Int64Value(*hours)
+        } else {
+          state.IncrementalHours = types.Int64Null()
+        }
+
+        minutes := monitor.Config.IncrementalClause.Duration.Minutes
+        if minutes != nil {
+          state.IncrementalMinutes = types.Int64Value(*minutes)
+        } else {
+          state.IncrementalMinutes = types.Int64Null()
+        }
+
+      } else {
+        state.IncrementalDays       = types.Int64Null()
+        state.IncrementalHours      = types.Int64Null()
+        state.IncrementalMinutes    = types.Int64Null()
+      }
+
+
     } else {
       state.IncrementalColumnName = types.StringNull()
       state.IncrementalDays       = types.Int64Null()
@@ -279,29 +314,24 @@ func (r *MonitorResource) Update(ctx context.Context, req resource.UpdateRequest
   }
 
   // Generate API request body from plan
-  var Duration api.Duration
-  if !plan.IncrementalDays.IsNull() || !plan.IncrementalHours.IsNull() || !plan.IncrementalMinutes.IsNull() {
-    Duration = api.Duration {
-      Days: plan.IncrementalDays.ValueInt64(),
-      Hours: plan.IncrementalHours.ValueInt64(),
-      Minutes: plan.IncrementalMinutes.ValueInt64(),
-    }
-  }
-
-  customSql := plan.CustomSql.ValueString()
-  customWhereClause := plan.CustomWhereClause.ValueString()
+  customSql             := plan.CustomSql.ValueString()
+  customWhereClause     := plan.CustomWhereClause.ValueString()
+  incrementalColumnName := plan.IncrementalColumnName.ValueString()
+  incrementalDays       := plan.IncrementalDays.ValueInt64()
+  incrementalHours      := plan.IncrementalHours.ValueInt64()
+  incrementalMinutes    := plan.IncrementalMinutes.ValueInt64()
 
   Config := api.Config{
-      CustomSql:         &customSql,
-      CustomWhereClause: &customWhereClause,
-  }
-
-  if !plan.IncrementalDays.IsNull() || !plan.IncrementalHours.IsNull() || !plan.IncrementalMinutes.IsNull() || !plan.IncrementalColumnName.IsNull() {
-      IncrementalClause := api.IncrementalClause{
-          ColumnName: plan.IncrementalColumnName.ValueString(),
-          Duration:   &Duration,
-      }
-      Config.IncrementalClause = &IncrementalClause
+    CustomSql:         &customSql,
+    CustomWhereClause: &customWhereClause,
+    IncrementalClause: &api.IncrementalClause{
+      ColumnName: &incrementalColumnName,
+      Duration: &api.Duration{
+        Days: &incrementalDays,
+        Hours: &incrementalHours,
+        Minutes: &incrementalMinutes,
+      },
+    },
   }
 
   updateMonitor := api.UpdateMonitor{

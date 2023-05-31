@@ -154,10 +154,10 @@ func (d *MonitorDataSource) Read(ctx context.Context, req datasource.ReadRequest
   state.UpdatedAt             = types.StringValue(monitor.UpdatedAt)
   state.CreatedAt             = types.StringValue(monitor.CreatedAt)
   state.CustomWhereClause     = types.StringValue(*monitor.Config.CustomWhereClause)
-  state.IncrementalColumnName = types.StringValue(monitor.Config.IncrementalClause.ColumnName)
-  state.IncrementalDays       = types.Int64Value(monitor.Config.IncrementalClause.Duration.Days)
-  state.IncrementalHours      = types.Int64Value(monitor.Config.IncrementalClause.Duration.Hours)
-  state.IncrementalMinutes    = types.Int64Value(monitor.Config.IncrementalClause.Duration.Minutes)
+  state.IncrementalColumnName = types.StringValue(*monitor.Config.IncrementalClause.ColumnName)
+  state.IncrementalDays       = types.Int64Value(*monitor.Config.IncrementalClause.Duration.Days)
+  state.IncrementalHours      = types.Int64Value(*monitor.Config.IncrementalClause.Duration.Hours)
+  state.IncrementalMinutes    = types.Int64Value(*monitor.Config.IncrementalClause.Duration.Minutes)
 
   // Set state
   diags := resp.State.Set(ctx, &state)
