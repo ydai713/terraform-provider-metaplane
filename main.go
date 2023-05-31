@@ -35,7 +35,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: "registry.terraform.io/klaviyo/metaplane",
+		Address: "registry.terraform.io/ydai713/metaplane",
 		Debug:   debug,
 	}
 

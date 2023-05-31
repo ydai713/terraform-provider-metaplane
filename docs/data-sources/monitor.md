@@ -31,6 +31,15 @@ data "metaplane_monitor" "monitor" {
 - `connection_id` (String) Connection identifier
 - `monitor_id` (String) Monitor identifier
 
+### Optional
+
+- `custom_sql` (String) custom sql
+- `custom_where_clause` (String) custom where clause
+- `incremental_column_name` (String) Incremental column name
+- `incremental_days` (Number) Incremental days
+- `incremental_hours` (Number) Incremental hours
+- `incremental_minutes` (Number) Incremental minutes
+
 ### Read-Only
 
 - `absolute_path` (String) {database}.{schema}.{table}.{column}

@@ -23,6 +23,13 @@ resource "metaplane_monitor" "monitor" {
   type          = "ROW_COUNT"
   cron_tab      = "* 2 * * *"
   connection_id = data.metaplane_connection.snowflake.id
+
+  custom_sql              = ""
+  custom_where_clause     = ""
+  incremental_column_name = ""
+  incremental_days        = 1
+  incremental_hours       = 0
+  incremental_minutes     = 0
 }
 ```
 
@@ -37,10 +44,18 @@ resource "metaplane_monitor" "monitor" {
 - `entity_type` (String) Entity type: table or column
 - `type` (String) Type of monitor, row_count, etc
 
+### Optional
+
+- `custom_sql` (String) custom sql
+- `custom_where_clause` (String) custom where clause
+- `incremental_column_name` (String) Incremental column name
+- `incremental_days` (Number) Incremental days
+- `incremental_hours` (Number) Incremental hours
+- `incremental_minutes` (Number) Incremental minutes
+
 ### Read-Only
 
 - `created_at` (String) datetime created
 - `monitor_id` (String) Monitor identifier
-- `updated_at` (String) datetime updated
 
 
